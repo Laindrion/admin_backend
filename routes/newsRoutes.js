@@ -28,7 +28,7 @@ const upload = multer({
 
 // POST /api/news
 router.post("/", isAuthenticated, upload.single("image"), async (req, res) => {
-   const { title, shortDescription } = req.body;
+   const { title, shortDescription, content } = req.body;
 
    try {
       const imagePath = `/uploads/${req.file.filename}`;
@@ -36,15 +36,16 @@ router.post("/", isAuthenticated, upload.single("image"), async (req, res) => {
       await News.create({
          title,
          shortDescription,
-         imagePath
+         content,
+         imagePath,
       });
       res.status(201).json({ message: 'News created successfully' });
    } catch (error) {
 
       if (req.file) {
-         await fs.unlink(`uploads/${file.filename}`);
+         fs.unlink(`uploads/${req.file.filename}`);
       }
-
+      console.error('❌ Error creating news:', error);
       res.status(500).json({ error: "Failed to create news" });
    }
 });
@@ -60,6 +61,21 @@ router.get("/", async (req, res) => {
    }
 })
 
+router.get("/:id", async (req, res) => {
+   const id = req.params.id;
+
+   try {
+      const newsItem = await News.findByPk(id);
+
+      if (!newsItem) {
+         return res.status(404).json({ error: "News not found" });
+      }
+      res.json(newsItem);
+   } catch (error) {
+      console.error('❌ Error fetching news:', error);
+      res.status(500).json({ error: "Failed to fetch news" });
+   }
+})
 
 // DELETE /api/news/:id
 
@@ -82,21 +98,36 @@ router.delete("/:id", async (req, res) => {
 
 // PUT /api/news/:id
 
-router.put("/:id", async (req, res) => {
+router.put("/:id", upload.single("image"), async (req, res) => {
+   const id = req.params.id;
+   const { title, shortDescription, content } = req.body;
+
    try {
-      const { title, shortDescription } = req.body;
-      const id = req.params.id;
-
-      const [updated] = await News.update(
-         { title, shortDescription },
-         { where: { id } }
-      )
-
-      if (updated) {
-         res.json({ message: 'News updated successfully' });
-      } else {
-         res.status(404).json({ error: 'News not found' });
+      const newsItem = await News.findByPk(id);
+      if (!newsItem) {
+         return res.status(404).json({ error: "News not found" });
       }
+
+      if (req.file && newsItem.imagePath) {
+         const oldPath = path.join('uploads', path.basename(newsItem.imagePath));
+
+         try {
+            await fs.unlink(oldPath);
+         } catch (error) {
+            console.error('❌ Error deleting old image:', error);
+         }
+      }
+
+      const imagePath = req.file ? `/uploads/${req.file.filename}` : newsItem.imagePath;
+
+      await newsItem.update({
+         title,
+         shortDescription,
+         content,
+         imagePath,
+      })
+
+      res.json({ message: 'News updated successfully' });
    } catch (error) {
       console.error('❌ Error updating news:', error);
       res.status(500).json({ error: "Failed to update news" });

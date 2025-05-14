@@ -13,6 +13,10 @@ const News = sequelize.define("News", {
    imagePath: {
       type: DataTypes.STRING,
       allowNull: false,
+   },
+   content: {
+      type: DataTypes.TEXT,
+      allowNull: true
    }
 }, {
 });
