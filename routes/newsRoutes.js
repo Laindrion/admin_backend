@@ -1,6 +1,6 @@
 import express from 'express';
 import multer from 'multer';
-import path from 'path';
+import path, { parse } from 'path';
 import News from '../models/News.js';
 import { isAuthenticated } from '../middleware/authMiddleWare.js';
 import fs from 'fs/promises';
@@ -53,8 +53,30 @@ router.post("/", isAuthenticated, upload.single("image"), async (req, res) => {
 // GET /api/news
 router.get("/", async (req, res) => {
    try {
-      const allNews = await News.findAll({ order: [['createdAt', 'DESC']] });
-      res.json(allNews)
+      const page = parseInt(req.query.page) || 1;
+      const limit = 4;
+      /*  const offset = (page - 1) * limit; */
+
+      if (page) {
+         const offset = (page - 1) * limit;
+         const { count, rows } = await News.findAndCountAll({
+            limit,
+            offset,
+            order: [["createdAt", "DESC"]],
+         })
+
+         const totalPages = Math.ceil(count / limit);
+
+         res.json({
+            items: rows,
+            totalPages
+         });
+      } else {
+         // If no pagination, return full list (maybe for admin or select)
+         const allNews = await News.findAll({ order: [['createdAt', 'DESC']] });
+         res.json(allNews);
+      }
+
    } catch (error) {
       console.error('❌ Error fetching news:', error);
       res.status(500).json({ error: "Failed to fetch news" });
