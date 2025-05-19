@@ -28,20 +28,20 @@ const upload = multer({
 
 // POST /api/news
 router.post("/", isAuthenticated, upload.single("image"), async (req, res) => {
-   const { title, shortDescription, content } = req.body;
+   const { title_en, title_ru, title_uz, shortDescription_en, shortDescription_ru, shortDescription_uz, content_en, content_ru, content_uz } = req.body;
 
    try {
       const imagePath = `/uploads/${req.file.filename}`;
 
       await News.create({
-         title,
-         shortDescription,
-         content,
-         imagePath,
+         title_en, title_ru, title_uz,
+         shortDescription_en, shortDescription_ru, shortDescription_uz,
+         content_en, content_ru, content_uz,
+         imagePath
       });
       res.status(201).json({ message: 'News created successfully' });
    } catch (error) {
-
+      // Remove uploaded image if something fails
       if (req.file) {
          fs.unlink(`uploads/${req.file.filename}`);
       }
@@ -123,7 +123,11 @@ router.delete("/:id", async (req, res) => {
 
 router.put("/:id", upload.single("image"), async (req, res) => {
    const id = req.params.id;
-   const { title, shortDescription, content } = req.body;
+   const {
+      title_en, title_ru, title_uz,
+      shortDescription_en, shortDescription_ru, shortDescription_uz,
+      content_en, content_ru, content_uz,
+   } = req.body;
 
    try {
       const newsItem = await News.findByPk(id);
@@ -131,22 +135,25 @@ router.put("/:id", upload.single("image"), async (req, res) => {
          return res.status(404).json({ error: "News not found" });
       }
 
-      if (req.file && newsItem.imagePath) {
-         const oldPath = path.join('uploads', path.basename(newsItem.imagePath));
+      /* Delete new image if new one is uploaded */
+      let imagePath = newsItem.imagePath;
 
+      if (req.file) {
+         const oldPath = path.join('uploads', path.basename(newsItem.imagePath));
          try {
             await fs.unlink(oldPath);
          } catch (error) {
             console.error('❌ Error deleting old image:', error);
          }
+         imagePath = `/uploads/${req.file.filename}`;
       }
 
-      const imagePath = req.file ? `/uploads/${req.file.filename}` : newsItem.imagePath;
+      /* const imagePath = req.file ? `/uploads/${req.file.filename}` : newsItem.imagePath; */
 
       await newsItem.update({
-         title,
-         shortDescription,
-         content,
+         title_en, title_ru, title_uz,
+         shortDescription_en, shortDescription_ru, shortDescription_uz,
+         content_en, content_ru, content_uz,
          imagePath,
       })
 

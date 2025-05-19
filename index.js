@@ -6,6 +6,7 @@ const PORT = process.env.PORT || 3001;
 const start = async () => {
    try {
       await sequelize.sync({
+         alter: true
          /* force: true, */ // Set to true to drop and recreate tables
       }); // /* auto-creates tables if not exist */
       console.log('Database connected successfully');
